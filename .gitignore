@@ -1,0 +1,5 @@
+sec.txt
+*.txt
+
+*.exe
+/lib/lib
