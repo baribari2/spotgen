@@ -27,6 +27,11 @@ type PlaylistTracks struct {
 	Total int    `json:"total"`
 }
 
+type PlaylistTracksPage struct {
+	Base
+	Tracks []PlaylistTrack `json:"items"`
+}
+
 type PlaylistResponse struct {
 	Base
 	Playlists []Playlist `json:"items"`

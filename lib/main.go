@@ -115,8 +115,13 @@ func initAuth(server *http.Server, token *models.TokenResponse, wg *sync.WaitGro
 }
 
 /*
-	 	Change to 127.0.0.1?
-		Display images on CLI?
+Change to 127.0.0.1?
+Display images on CLI?
+
+To-Do:
+
+	Switch generate functions to goroutines
+	Increase personalization (Spotify API requests)
 */
 func main() {
 	featured := flag.NewFlagSet("feat", flag.PanicOnError)

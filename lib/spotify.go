@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	"strings"
 
 	"github.com/broothie/qst"
 	"github.com/spotify-playlist-generator/lib/models"
@@ -56,9 +55,37 @@ func generateFeatured(length string, name string, public bool, collab bool, desc
 
 	tracks := []string{}
 
-	// Append track endpoint from every playlist to `tracks` slice
+	// To-Do: switch to goroutines
+
+	//Make GET requests to obtain playlist(s) items
 	for _, p := range featured.Playlists.Playlists {
-		tracks = append(tracks, p.URL)
+		if len(tracks) > 99 {
+			continue
+		}
+
+		res, err = qst.Get(
+			base+"/playlists/"+p.Id+"/tracks",
+			qst.Header("Authorization", "Bearer "+token.AccessToken),
+			qst.Header("Content-Type", "application/json"),
+		)
+
+		if err != nil {
+			return "", err
+		}
+
+		var result models.PlaylistTracksPage
+		err = json.NewDecoder(res.Body).Decode(&result)
+
+		// Append track endpoints from every playlist to `tracks` slice
+		for _, t := range result.Tracks {
+			tracks = append(tracks, t.Track.Id)
+		}
+	}
+
+	// Parsing the track endpoints to obtain track id to use with spotify uri
+	uris := []string{}
+	for _, id := range tracks {
+		uris = append(uris, ("spotify:track:" + id))
 	}
 
 	// POST request to create playlist
@@ -84,37 +111,23 @@ func generateFeatured(length string, name string, public bool, collab bool, desc
 	}
 	err = json.NewDecoder(res.Body).Decode(&p)
 
-	// Parsing the track endoints to obtain track id to use with spotify uri
-	uris := []string{}
-	for _, t := range tracks {
-		spl := strings.SplitAfter(t, "/")
-
-		uris = append(uris, ("spotify:track:" + spl[len(spl)-1]))
-	}
-
-	uris = uris[:len(uris)-1]
-
-	log.Printf("URIS: %v \n", uris)
-
-	//POST request to add tracks
-	ress, err := qst.Post(
+	// POST request to add tracks
+	res, err = qst.Post(
 		base+"/playlists/"+p.Id+"/tracks",
 		qst.Header("Authorization", "Bearer "+token.AccessToken),
-		qst.QueryValue("position", "0"),
 		qst.BodyJSON(
 			map[string]interface{}{
-				"uris": uris,
+				"uris":     uris,
+				"position": 0,
 			},
 		),
 	)
-
-	log.Printf("REQUEST: %v", ress)
 
 	if err != nil {
 		return "", nil
 	}
 
-	//log.Printf("RES: %v \n", res)
+	log.Printf("RESPONSE: %v", res)
 
 	return p.URL, nil
 }
