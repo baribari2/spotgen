@@ -3,16 +3,12 @@ package main
 import (
 	"context"
 	b64 "encoding/base64"
-	"flag"
-
-	//"fmt"
 	"log"
 	"net/http"
-	"os"
 	"sync"
 
+	"github.com/baribari2/spotify-playlist-generator/pkg/models"
 	"github.com/broothie/qst"
-	"github.com/spotify-playlist-generator/lib/models"
 )
 
 func initAuth(server *http.Server, token *models.TokenResponse, wg *sync.WaitGroup) {
@@ -112,57 +108,4 @@ func initAuth(server *http.Server, token *models.TokenResponse, wg *sync.WaitGro
 		defer server.Shutdown(context.Background())
 	}()
 
-}
-
-/*
-Change to 127.0.0.1?
-Display images on CLI?
-
-To-Do:
-
-	Switch generate functions to goroutines
-	Increase personalization (Spotify API requests)
-*/
-func main() {
-	featured := flag.NewFlagSet("feat", flag.PanicOnError)
-	flength := featured.String("len", "50", "Length of the album to be created")
-	fname := featured.String("name", "", "Name of the playlist to be created")
-	fpublic := featured.Bool("pub", true, "Publicity of the playlist to be created")
-	fcollab := featured.Bool("collab", false, "Collaboration capabilities of the playlist to be created")
-	fdesc := featured.String("desc", "", "Description of the playlist to be created. May be left blank")
-
-	var (
-		token  = &models.TokenResponse{}
-		server = &http.Server{
-			Addr: ":8888",
-		}
-		wg = &sync.WaitGroup{}
-	)
-
-	if len(os.Args) < 2 {
-		log.Printf("Expected a command (feat, word, rec)")
-		os.Exit(1)
-	}
-
-	initAuth(server, token, wg)
-
-	wg.Wait()
-
-	switch os.Args[1] {
-	case "feat":
-
-		err := featured.Parse(os.Args[2:])
-		if err != nil {
-			log.Printf("Failed to parse OS arguments: %v", err.Error())
-		}
-
-		playlist, err := generateFeatured(*flength, *fname, *fpublic, *fcollab, *fdesc, token)
-		if err != nil {
-			log.Printf("Failed to generate `feat` playlist: %v", err.Error())
-		}
-
-		log.Printf(">>>    Generated playlist: %v    <<<", playlist)
-	default:
-		log.Println("Expected a command (feat, word, rec)")
-	}
 }

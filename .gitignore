@@ -2,4 +2,6 @@ sec.txt
 *.txt
 
 *.exe
-/lib/lib
+spotify-playlist-generator
+
+.env
