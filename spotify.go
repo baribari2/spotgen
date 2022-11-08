@@ -3,14 +3,18 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"strings"
+	"sync"
 
 	"github.com/baribari2/spotify-playlist-generator/pkg/models"
 	"github.com/broothie/qst"
 )
 
 // Generates a playlist using songs from the users featured section
-func generateFeatured(length, name, desc string, public, collab bool, token *models.TokenResponse) (string, error) {
+func generateFeatured(length, name, desc string, public, collab bool, currUser *models.PUser, token *models.TokenResponse, wg *sync.WaitGroup) (string, error) {
+	log.Printf(">>>   Generating featured playlist    <<<")
+
 	if name == "" {
 		return "", errors.New("Missing name parameter")
 	}
@@ -21,24 +25,8 @@ func generateFeatured(length, name, desc string, public, collab bool, token *mod
 
 	base := "https://api.spotify.com/v1"
 
-	//GET request to obtain information about the current user
-	res, err := qst.Get(
-		base+"/me",
-		qst.Header("Authorization", "Bearer "+token.AccessToken),
-	)
-
-	if err != nil {
-		return "", err
-	}
-
-	var currUser models.PUser
-	err = json.NewDecoder(res.Body).Decode(&currUser)
-	if err != nil {
-		return "", err
-	}
-
 	// GET request to obtain featured playlists
-	res, err = qst.Get(
+	res, err := qst.Get(
 		base+"/browse/featured-playlists",
 		qst.Header("Authorization", "Bearer "+token.AccessToken),
 		qst.QueryValue("limit", length),
@@ -55,68 +43,62 @@ func generateFeatured(length, name, desc string, public, collab bool, token *mod
 	err = json.NewDecoder(res.Body).Decode(&featured)
 
 	tracks := []string{}
-
-	// To-Do: switch to goroutines
+	track := make(chan string, len(featured.Playlists.Playlists))
 
 	//Make GET requests to obtain playlist(s) items
 	for _, p := range featured.Playlists.Playlists {
-		if len(tracks) > 99 {
-			continue
-		}
+		wg.Add(1)
 
-		res, err = qst.Get(
-			base+"/playlists/"+p.Id+"/tracks",
-			qst.Header("Authorization", "Bearer "+token.AccessToken),
-			qst.Header("Content-Type", "application/json"),
-		)
+		go func(p models.Playlist) {
 
-		if err != nil {
-			return "", err
-		}
+			res, err := qst.Get(
+				base+"/playlists/"+p.Id+"/tracks",
+				qst.Header("Authorization", "Bearer "+token.AccessToken),
+				qst.Header("Content-Type", "application/json"),
+			)
 
-		var result models.PlaylistTracksPage
-		err = json.NewDecoder(res.Body).Decode(&result)
-
-		// Append track endpoints from every playlist to `tracks` slice
-		for _, t := range result.Tracks {
-			if len(tracks) > 99 {
-				continue
+			if err != nil {
+				wg.Done()
+				return
 			}
 
-			tracks = append(tracks, t.Track.Id)
+			var result models.PlaylistTracksPage
+			err = json.NewDecoder(res.Body).Decode(&result)
+			if err != nil {
+				wg.Done()
+				return
+			}
+
+			// Append track ids from every playlist to `tracks` slice
+			for _, t := range result.Tracks {
+				track <- t.Track.Id
+			}
+
+			wg.Done()
+		}(p)
+	}
+
+	wg.Wait()
+
+	close(track)
+	for t := range track {
+		if len(tracks) > 99 {
+			continue
+		} else {
+			tracks = append(tracks, t)
 		}
 	}
 
-	// Parsing the track endpoints to obtain track id to use with spotify uri
+	// Formatting Spotify track URIs
 	uris := []string{}
 	for _, id := range tracks {
 		uris = append(uris, ("spotify:track:" + id))
 	}
 
-	// POST request to create playlist
-	res, err = qst.Post(
-		base+"/users/"+currUser.Id+"/playlists",
-		qst.Header("Authorization", "Bearer "+token.AccessToken),
-		qst.Header("Content-Type", "application/json"),
-		qst.BodyJSON(
-			map[string]interface{}{
-				"name":          name,
-				"public":        public,
-				"collaborative": collab,
-				"description":   desc,
-			},
-		),
-	)
-
+	pl, err := createPlaylist(name, length, desc, public, collab, currUser, token)
 	if err != nil {
 		return "", err
 	}
-
-	var pl struct {
-		models.Playlist
-	}
-	err = json.NewDecoder(res.Body).Decode(&pl)
-
 	// POST request to add tracks
 	res, err = qst.Post(
 		base+"/playlists/"+pl.Id+"/tracks",
@@ -137,7 +119,9 @@ func generateFeatured(length, name, desc string, public, collab bool, token *mod
 	return pl.URL, nil
 }
 
-func generateRecommended(length, name, desc string, public, collab bool, gen, art string, token *models.TokenResponse) (string, error) {
+func generateRecommended(length, name, desc string, public, collab bool, gen, art string, currUser *models.PUser, token *models.TokenResponse, wg *sync.WaitGroup) (string, error) {
+	log.Printf(">>>   Generating recommended playlist    <<<")
+
 	if name == "" {
 		return "", errors.New("Missing name parameter")
 	}
@@ -156,8 +140,6 @@ func generateRecommended(length, name, desc string, public, collab bool, gen, ar
 
 	for _, v := range artists {
 		t := strings.SplitAfter(v, " ")
-
-		// log.Printf("Artists after split: %v", t)
 
 		if len(t) > 1 {
 			var te string
@@ -178,51 +160,51 @@ func generateRecommended(length, name, desc string, public, collab bool, gen, ar
 
 	base := "https://api.spotify.com/v1"
 
-	//GET /me (move function call to main to keep modular)
-	res, err := qst.Get(
-		base+"/me",
-		qst.Header("Authorization", "Bearer "+token.AccessToken),
-	)
-
-	if err != nil {
-		return "", err
-	}
-
-	var currUser models.PUser
-	err = json.NewDecoder(res.Body).Decode(&currUser)
-	if err != nil {
-		return "", err
-	}
-
 	var uriQuery string
-	var artist struct {
-		models.ArtistResponse `json:"artists"`
-	}
+	artistC := make(chan *models.Artist, len(artists))
 
 	// GET requests to obtain artist id's
 	for i := range artists {
-		res, err = qst.Get(
-			base+"/search",
-			qst.Header("Authorization", "Bearer "+token.AccessToken),
-			qst.Header("Content-Type", "application/json"),
-			qst.QueryValue("type", "artist"),
-			qst.QueryValue("q", searchQuery[i]),
-		)
+		wg.Add(1)
 
-		if err != nil {
-			return "", err
-		}
+		go func(i int) {
+			res, err := qst.Get(
+				base+"/search",
+				qst.Header("Authorization", "Bearer "+token.AccessToken),
+				qst.Header("Content-Type", "application/json"),
+				qst.QueryValue("type", "artist"),
+				qst.QueryValue("q", searchQuery[i]),
+			)
 
-		err = json.NewDecoder(res.Body).Decode(&artist)
-		if err != nil {
-			return "", err
-		}
+			if err != nil {
+				log.Printf("Failed to make search GET request: %v", err.Error())
+				return
+			}
 
-		uriQuery += artist.Artists[0].Id + ","
+			var artist struct {
+				models.ArtistResponse `json:"artists"`
+			}
+
+			err = json.NewDecoder(res.Body).Decode(&artist)
+			if err != nil {
+				log.Printf("Failed to make search GET request: %v", err.Error())
+				return
+			}
+
+			defer wg.Done()
+			artistC <- &artist.Artists[0]
+		}(i)
+	}
+
+	wg.Wait()
+
+	close(artistC)
+	for a := range artistC {
+		uriQuery += a.Id + ","
 	}
 
 	//GET recommendations
-	res, err = qst.Get(
+	res, err := qst.Get(
 		base+"/recommendations",
 		qst.Header("Authorization", "Bearer "+token.AccessToken),
 		qst.Header("Content-Type", "application/json"),
@@ -247,8 +229,24 @@ func generateRecommended(length, name, desc string, public, collab bool, gen, ar
 		uris = append(uris, "spotify:track:"+r.Id)
 	}
 
-	//POST Create playlist
-	res, err = qst.Post(
+	p, err := createPlaylist(name, length, desc, public, collab, currUser, token)
+	if err != nil {
+		return "", err
+	}
+
+	err = addToPlaylist(p, uris, token)
+	if err != nil {
+		return "", err
+	}
+
+	return p.URL, nil
+}
+
+// POST request to create playlist
+func createPlaylist(name, length, desc string, public, collab bool, currUser *models.PUser, token *models.TokenResponse) (*models.Playlist, error) {
+	base := "https://api.spotify.com/v1"
+
+	res, err := qst.Post(
 		base+"/users/"+currUser.Id+"/playlists",
 		qst.Header("Authorization", "Bearer "+token.AccessToken),
 		qst.Header("Content-Type", "application/json"),
@@ -263,7 +261,7 @@ func generateRecommended(length, name, desc string, public, collab bool, gen, ar
 	)
 
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	var p struct {
@@ -271,22 +269,50 @@ func generateRecommended(length, name, desc string, public, collab bool, gen, ar
 	}
 	err = json.NewDecoder(res.Body).Decode(&p)
 
-	//POST add to playlist
-	res, err = qst.Post(
-		base+"/playlists/"+p.Id+"/tracks",
+	return &p.Playlist, nil
+}
+
+// POST add to playlist
+func addToPlaylist(playlist *models.Playlist, URIS []string, token *models.TokenResponse) error {
+	base := "https://api.spotify.com/v1"
+
+	_, err := qst.Post(
+		base+"/playlists/"+playlist.Id+"/tracks",
 		qst.Header("Authorization", "Bearer "+token.AccessToken),
 		qst.Header("Content-Type", "application/json"),
 		qst.BodyJSON(
 			map[string]interface{}{
-				"uris":     uris,
+				"uris":     URIS,
 				"position": 0,
 			},
 		),
 	)
 
 	if err != nil {
-		return "", nil
+		return err
 	}
 
-	return p.URL, nil
+	return nil
+}
+
+// GET request to obtain information about the current user
+func getCurrentUser(token *models.TokenResponse) (*models.PUser, error) {
+	base := "https://api.spotify.com/v1"
+
+	res, err := qst.Get(
+		base+"/me",
+		qst.Header("Authorization", "Bearer "+token.AccessToken),
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var currUser models.PUser
+	err = json.NewDecoder(res.Body).Decode(&currUser)
+	if err != nil {
+		return nil, err
+	}
+
+	return &currUser, nil
 }
