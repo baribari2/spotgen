@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/baribari2/spotify-playlist-generator/pkg/models"
+	"github.com/baribari2/spotgen/pkg/models"
 	"github.com/broothie/qst"
 )
 
@@ -45,7 +45,7 @@ func generateFeatured(length, name, desc string, public, collab bool, currUser *
 	tracks := []string{}
 	track := make(chan string, len(featured.Playlists.Playlists))
 
-	//Make GET requests to obtain playlist(s) items
+	// GET requests to obtain playlist(s) items
 	for _, p := range featured.Playlists.Playlists {
 		wg.Add(1)
 
@@ -119,6 +119,7 @@ func generateFeatured(length, name, desc string, public, collab bool, currUser *
 	return pl.URL, nil
 }
 
+// Generates a playlist using seed values (artists & genres)
 func generateRecommended(length, name, desc string, public, collab bool, gen, art string, currUser *models.PUser, token *models.TokenResponse, wg *sync.WaitGroup) (string, error) {
 	log.Printf(">>>   Generating recommended playlist    <<<")
 
@@ -134,7 +135,7 @@ func generateRecommended(length, name, desc string, public, collab bool, gen, ar
 	genres := strings.SplitAfter(gen, ",")
 	searchQuery := []string{}
 
-	if len(artists)+len(genres) >= 5 {
+	if len(artists)+len(genres) > 5 {
 		return "", errors.New("Too many seed items")
 	}
 
@@ -162,6 +163,9 @@ func generateRecommended(length, name, desc string, public, collab bool, gen, ar
 
 	var uriQuery string
 	artistC := make(chan *models.Artist, len(artists))
+
+	log.Printf("Artists: %v", artists)
+	log.Printf("Query: %v", searchQuery)
 
 	// GET requests to obtain artist id's
 	for i := range artists {
@@ -191,8 +195,12 @@ func generateRecommended(length, name, desc string, public, collab bool, gen, ar
 				return
 			}
 
+			log.Printf("Artist inside gr: %v", artist)
+
 			defer wg.Done()
-			artistC <- &artist.Artists[0]
+			if len(artist.Artists) > 0 {
+				artistC <- &artist.Artists[0]
+			}
 		}(i)
 	}
 

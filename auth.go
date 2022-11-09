@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/baribari2/spotify-playlist-generator/pkg/models"
+	"github.com/baribari2/spotgen/pkg/models"
 	"github.com/broothie/qst"
 )
 

@@ -8,16 +8,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/baribari2/spotify-playlist-generator/pkg/models"
+	"github.com/baribari2/spotgen/pkg/models"
 )
 
-/*
-Display images on CLI?
-
-To-Do:
-
-	Switch generate functions to goroutines
-*/
 func main() {
 	var (
 		featured = flag.NewFlagSet("feat", flag.PanicOnError)
@@ -35,7 +28,6 @@ func main() {
 		rgenres     = recommended.String("gen", "", "Seed artists for playlist generation (Comma-separated list: a,b,c), total seed items must not exceed 5")
 		rpublic     = recommended.Bool("pub", true, "Publicity of the playlist to be created")
 		rcollab     = recommended.Bool("collab", false, "Collaboration capabilities of the playlist to be created")
-		//rtracks = recommended.String("len", "50", "Length of the playlist to be created")
 
 		token  = &models.TokenResponse{}
 		server = &http.Server{
@@ -54,12 +46,14 @@ func main() {
 
 	wg.Wait()
 
+	// GET request to get current user
 	cu, err := getCurrentUser(token)
 	if err != nil {
 		log.Printf("Failed to get current user: %v", err.Error())
 		return
 	}
 
+	// CLI handling
 	switch os.Args[1] {
 	case "feat":
 

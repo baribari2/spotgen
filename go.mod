@@ -1,4 +1,4 @@
-module github.com/baribari2/spotify-playlist-generator
+module github.com/baribari2/spotgen
 
 go 1.19
 
