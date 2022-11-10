@@ -2,5 +2,6 @@ sec.txt
 *.txt
 
 *.exe
+spotgen
 
 .env
