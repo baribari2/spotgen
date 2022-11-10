@@ -164,9 +164,6 @@ func generateRecommended(length, name, desc string, public, collab bool, gen, ar
 	var uriQuery string
 	artistC := make(chan *models.Artist, len(artists))
 
-	log.Printf("Artists: %v", artists)
-	log.Printf("Query: %v", searchQuery)
-
 	// GET requests to obtain artist id's
 	for i := range artists {
 		wg.Add(1)
@@ -194,8 +191,6 @@ func generateRecommended(length, name, desc string, public, collab bool, gen, ar
 				log.Printf("Failed to make search GET request: %v", err.Error())
 				return
 			}
-
-			log.Printf("Artist inside gr: %v", artist)
 
 			defer wg.Done()
 			if len(artist.Artists) > 0 {

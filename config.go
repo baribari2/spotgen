@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 var (
@@ -29,6 +31,8 @@ func getUncheckedEnv(env string) string {
 }
 
 func init() {
+	godotenv.Load()
+
 	CLIENT_ID = getEnv("CLIENT_ID")
 	CLIENT_SECRET = getEnv("CLIENT_SECRET")
 	ACCESS_TOKEN = getUncheckedEnv("CLIENT_SECRET")
