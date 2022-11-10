@@ -58,16 +58,16 @@ COMMANDS:
 ### Examples
 
 Featured playlist with all fields:
- `./spotgen feat --name Generate1 --len 25 --desc "Spotgenerated" --pub false --collab true`
+ `$ ./spotgen feat --name Generate1 --len 25 --desc "Spotgenerated" --pub false --collab true`
 
 Featured playlist with the only required flag:
- `./spotgen feat --name Generate2`
+ `$ ./spotgen feat --name Generate2`
 
 Recommended playlist with all fields:
-`./spotgen rec --name Generate3 --len 40 --desc "Spotgenerated2" --art "Drake,The Internet" --pub true --collab false`
+`$ ./spotgen rec --name Generate3 --len 40 --desc "Spotgenerated2" --art "Drake,The Internet" --pub true --collab false`
 
 Recommended playlist with default length:
-`./spotgen rec --name Generate4 --desc "Spotgenerated3" --art "Luke Bryan, Babytron" --pub true --collab false`
+`$ ./spotgen rec --name Generate4 --desc "Spotgenerated3" --art "Luke Bryan,Babytron" --pub true --collab false`
 
 ## To-Do
 
