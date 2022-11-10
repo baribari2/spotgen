@@ -10,7 +10,7 @@ Spotgen is a minimal CLI tool for quickly generating spotify playlists.
 
 To install, clone this repository and run `go build`
 
-# Configuration
+## Configuration
 
 In order to use Spotgen you must first create an app in the Spotify developer portal. Once created go to settings and set your redirect URI to `https://localhost:8888/` and save. Then, using the client id and client secret provided by the developer portal, create a top-level `.env` file and set the `CLIENT_ID` & `CLIENT_SECRET` variables.
 
