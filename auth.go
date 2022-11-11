@@ -20,13 +20,6 @@ func initAuth(server *http.Server, token *models.TokenResponse, wg *sync.WaitGro
 
 	log.Println(">>>   Starting Spotify Playlist Generator   <<<")
 
-	// if ACCESS_TOKEN != "" && REFRESH_TOKEN != "" {
-	// 	token.AccessToken = ACCESS_TOKEN
-	// 	token.RefreshToken = REFRESH_TOKEN
-
-	// 	return
-	// }
-
 	// Assign handlers to routes
 	http.HandleFunc("/login", func(w http.ResponseWriter, req *http.Request) {
 		get, err := qst.NewGet(
@@ -85,9 +78,6 @@ func initAuth(server *http.Server, token *models.TokenResponse, wg *sync.WaitGro
 			log.Printf("Failed to decode JSON response body: %v", err.Error())
 			return
 		}
-
-		// _ = os.Setenv("ACCESS_TOKEN", token.AccessToken)
-		// _ = os.Setenv("REFRESH_TOKEN", token.RefreshToken)
 
 		wg.Done()
 

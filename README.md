@@ -68,8 +68,3 @@ Recommended playlist with all fields:
 
 Recommended playlist with default length:
 `$ ./spotgen rec --name Generate4 --desc "Spotgenerated3" --art "Luke Bryan,Babytron" --pub true --collab false`
-
-## To-Do
-
- - Automate verification step
- 
