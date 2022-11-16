@@ -135,7 +135,7 @@ func generateRecommended(length, name, desc string, public, collab bool, gen, ar
 	genres := strings.SplitAfter(gen, ",")
 	searchQuery := []string{}
 
-	if len(artists)+len(genres) > 5 {
+	if (len(artists)-1)+(len(genres)-1) > 5 {
 		return "", errors.New("Too many seed items")
 	}
 
