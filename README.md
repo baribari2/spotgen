@@ -1,7 +1,5 @@
 # Spotgen
 
-## What?
-
 Spotgen is a minimal CLI tool for quickly generating spotify playlists.
 
 **Note:** You will need access to a browser in order to register your app and initiate user verification
@@ -28,30 +26,19 @@ USAGE:
 COMMANDS:
     feat    Generate a featured playlist
         --name      Name of the playlist to be generated
-
         --len       Length of the playlist to be generated
-
         --desc      Description of the playlist to be generated
-
         --pub       Publicity of the playlist to be generated
-
         --collab    Collaboration capabilities of the playlist to be generated
 
     rec     Generate a recommended playlsit
         --name      Name of the playlist to be generated
-
         --len       Name of the playlist to be generated
-
         --desc      Name of the playlist to be generated
-
         --art       Comma-separated string of artists to use for playlist generation
-
         --gen       Comma-separated string of genres to use for playlist generation
-
         --pub       Publicity of the playlist to be generated
-
         --collab    Collaboration capabilities of the playlist to be generated
-
 ```
 **Note:** You must use quotes when using the `--desc`, `--art`, & `--gen` flags if the value contains spaces or else it will parse incorrectly 
 
