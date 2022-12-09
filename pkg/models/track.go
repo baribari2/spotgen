@@ -18,7 +18,7 @@ type FullTrack struct {
 
 type PlaylistTrack struct {
 	AddedAt string    `json:"added_at"`
-	AddedBy string    `json:"added_by"`
+	AddedBy User      `json:"added_by"`
 	IsLocal bool      `json:"is_local"`
 	Track   FullTrack `json:"track"`
 }

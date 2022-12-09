@@ -43,10 +43,10 @@ func generateFeatured(length, name, desc string, public, collab bool, currUser *
 	err = json.NewDecoder(res.Body).Decode(&featured)
 
 	tracks := []string{}
-	track := make(chan string, len(featured.Playlists.Playlists))
+	track := make(chan string, 100)
 
 	// GET requests to obtain playlist(s) items
-	for _, p := range featured.Playlists.Playlists {
+	for _, p := range featured.Playlists.Playlists[len(featured.Playlists.Playlists)/2 : (len(featured.Playlists.Playlists)/2)+1] {
 		wg.Add(1)
 
 		go func(p models.Playlist) {
@@ -58,23 +58,21 @@ func generateFeatured(length, name, desc string, public, collab bool, currUser *
 			)
 
 			if err != nil {
-				wg.Done()
 				return
 			}
 
 			var result models.PlaylistTracksPage
 			err = json.NewDecoder(res.Body).Decode(&result)
 			if err != nil {
-				wg.Done()
 				return
 			}
+
+			defer wg.Done()
 
 			// Append track ids from every playlist to `tracks` slice
 			for _, t := range result.Tracks {
 				track <- t.Track.Id
 			}
-
-			wg.Done()
 		}(p)
 	}
 
